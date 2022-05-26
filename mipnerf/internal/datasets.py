@@ -156,26 +156,25 @@ class Dataset(threading.Thread):
       
       '''
       image_index = np.random.randint(0, self.n_examples, ())
+      image_index = 1
       print("debug here::",image_index)
       mask = self.masks[image_index].reshape(-1)
       print("mask shape::",mask.shape,self.rays[0][0].shape)
       
       ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
       # print("ray_indices_all::",ray_indices_all.shape,mask.sum())
-      
       ray_indices_id = np.random.randint(0, ray_indices_all.shape[0],
                                       (self.batch_size,))
       ray_indices = ray_indices_all[ray_indices_id]
       
-      
-      self.test_L[ray_indices] = True
-      print("Now test_L:",self.test_L.sum())
-      self.image_test = self.test_L.reshape(self.masks[0].shape)
-      plt.imsave("mask_test.png",self.image_test)
+      if self.test==True:
+        self.test_L[ray_indices] = True
+        print("Now test_L:",int(self.test_L.sum()))
+        self.image_test = self.test_L.reshape(self.masks[0].shape)
+        plt.imsave("mask_test.png",self.image_test)
       
       batch_pixels = self.images[image_index][ray_indices]
-      
-      print("debug here2::",batch_pixels.shape)
+      # print("debug here2::",batch_pixels.shape)
       batch_rays = utils.namedtuple_map(lambda r: r[image_index][ray_indices],
                                         self.rays)
     else:
@@ -457,11 +456,14 @@ class LLFF(Dataset):
     # Load masks TO CHANGE
     print("Loading the mask:")
     self.masks = np.load("/data/guangyu/zhangkai/nerf_llff_data/scan9/mask/masks.npy")
+    self.masks = self.masks[indices]
     print("Mask shape::",self.masks.shape)
       
     # test the mask 
-    self.image_test = np.zeros(images[0].shape)
-    self.test_L = np.zeros(images[0].reshape(-1).shape[0])
+    self.test = False
+    if self.test==True:
+      self.image_test = np.zeros(images[0].shape)
+      self.test_L = np.zeros(images[0][:,:,0].reshape(-1).shape[0])
     
     self.camtoworlds = poses[:, :3, :4]
     self.focal = poses[0, -1, -1]
