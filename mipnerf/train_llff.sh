@@ -15,8 +15,8 @@
 
 # Script for training on the LLFF dataset.
 
-SCENE=trex
-EXPERIMENT=debug
+SCENE=Panther
+EXPERIMENT=20220526
 TRAIN_DIR=/data/guangyu/zhangkai/nerf_results/$EXPERIMENT/$SCENE
 DATA_DIR=/data/guangyu/zhangkai/nerf_llff_data/$SCENE
 
@@ -25,7 +25,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/guangyu/miniconda3/envs/jaxnerf/li
 export XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/local/cuda-11.4
 
 rm $TRAIN_DIR/*
-CUDA_VISIBLE_DEVICES=0 python -m train \
+CUDA_VISIBLE_DEVICES=1 python -m train \
   --data_dir=$DATA_DIR \
   --train_dir=$TRAIN_DIR \
   --gin_file=configs/llff.gin \
