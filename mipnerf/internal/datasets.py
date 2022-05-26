@@ -156,10 +156,11 @@ class Dataset(threading.Thread):
       
       '''
       image_index = np.random.randint(0, self.n_examples, ())
-      image_index = 1
-      print("debug here::",image_index)
+      if self.test==True:
+        image_index = 1
+      print("image_index::",image_index)
       mask = self.masks[image_index].reshape(-1)
-      print("mask shape::",mask.shape,self.rays[0][0].shape)
+      # print("mask shape::",mask.shape,self.rays[0][0].shape)
       
       ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
       # print("ray_indices_all::",ray_indices_all.shape,mask.sum())
@@ -439,7 +440,14 @@ class LLFF(Dataset):
     if not config.spherify and self.split == 'test':
       self._generate_spiral_poses(poses, bds)
     # Select the split.
-    i_test = np.arange(images.shape[0])[::config.llffhold]
+    self.scene = 'Panther'
+    if self.scene == 'Panther':
+          i_test = np.array([[1,2,3,4,24,38,49,62,74,86,96,111,140,188,205,208,209,231,235,245,266,273,312]])
+          
+    else:
+          i_test = np.arange(images.shape[0])[::config.llffhold]
+    self.mask_file = "/data/guangyu/zhangkai/nerf_llff_data/{}/mask/masks.npy".format(self.scene)
+    
     i_train = np.array(
         [i for i in np.arange(int(images.shape[0])) if i not in i_test])
     if self.split == 'train':
@@ -455,7 +463,7 @@ class LLFF(Dataset):
     print("image shape::",self.images.shape)
     # Load masks TO CHANGE
     print("Loading the mask:")
-    self.masks = np.load("/data/guangyu/zhangkai/nerf_llff_data/scan9/mask/masks.npy")
+    self.masks = np.load(self.mask_file)
     self.masks = self.masks[indices]
     print("Mask shape::",self.masks.shape)
       
