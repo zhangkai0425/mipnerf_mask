@@ -14,6 +14,7 @@
 
 # Lint as: python3
 """Different datasets implementation plus a general port for all the datasets."""
+from cmath import pi
 import json
 import os
 from os import path
@@ -23,6 +24,7 @@ import cv2
 import jax
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 from internal import utils
 
 
@@ -148,11 +150,32 @@ class Dataset(threading.Thread):
       batch_pixels = self.images[ray_indices]
       batch_rays = utils.namedtuple_map(lambda r: r[ray_indices], self.rays)
     elif self.batching == 'single_image':
-      # 加入Mask训练无非就是
+      # TODO:加入Mask训练无非就是采样点上面做文章
+      '''
+      上次所写,有一定的问题,此次重写,不要出问题
+      
+      '''
       image_index = np.random.randint(0, self.n_examples, ())
-      ray_indices = np.random.randint(0, self.rays[0][0].shape[0],
+      print("debug here::",image_index)
+      mask = self.masks[image_index].reshape(-1)
+      print("mask shape::",mask.shape,self.rays[0][0].shape)
+      
+      ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
+      # print("ray_indices_all::",ray_indices_all.shape,mask.sum())
+      
+      ray_indices_id = np.random.randint(0, ray_indices_all.shape[0],
                                       (self.batch_size,))
+      ray_indices = ray_indices_all[ray_indices_id]
+      
+      
+      self.test_L[ray_indices] = True
+      print("Now test_L:",self.test_L.sum())
+      self.image_test = self.test_L.reshape(self.masks[0].shape)
+      plt.imsave("mask_test.png",self.image_test)
+      
       batch_pixels = self.images[image_index][ray_indices]
+      
+      print("debug here2::",batch_pixels.shape)
       batch_rays = utils.namedtuple_map(lambda r: r[image_index][ray_indices],
                                         self.rays)
     else:
@@ -378,6 +401,7 @@ class LLFF(Dataset):
         images.append(image)
     images = np.stack(images, axis=-1)
 
+
     # Load poses and bds.
     with utils.open_file(path.join(self.data_dir, 'poses_bounds.npy'),
                          'rb') as fp:
@@ -415,7 +439,6 @@ class LLFF(Dataset):
       self.spherify = False
     if not config.spherify and self.split == 'test':
       self._generate_spiral_poses(poses, bds)
-
     # Select the split.
     i_test = np.arange(images.shape[0])[::config.llffhold]
     i_train = np.array(
@@ -426,8 +449,20 @@ class LLFF(Dataset):
       indices = i_test
     images = images[indices]
     poses = poses[indices]
-
+    
+    print("i_test:",i_test,"i_train",i_train)
+    
     self.images = images
+    print("image shape::",self.images.shape)
+    # Load masks TO CHANGE
+    print("Loading the mask:")
+    self.masks = np.load("/data/guangyu/zhangkai/nerf_llff_data/scan9/mask/masks.npy")
+    print("Mask shape::",self.masks.shape)
+      
+    # test the mask 
+    self.image_test = np.zeros(images[0].shape)
+    self.test_L = np.zeros(images[0].reshape(-1).shape[0])
+    
     self.camtoworlds = poses[:, :3, :4]
     self.focal = poses[0, -1, -1]
     self.h, self.w = images.shape[1:3]
