@@ -35,8 +35,9 @@ def get_dataset(split, train_dir, config):
 def convert_to_ndc(origins, directions, focal, w, h, near=1.):
   """Convert a set of rays to NDC coordinates."""
   # Shift ray origins to near plane
+  directions = directions + 1e-6
   t = -(near + origins[..., 2]) / directions[..., 2]
-  origins = origins + t[..., None] * directions
+  origins = origins + t[..., None] * directionsq + 1e-6
 
   dx, dy, dz = tuple(np.moveaxis(directions, -1, 0))
   ox, oy, oz = tuple(np.moveaxis(origins, -1, 0))
@@ -162,8 +163,14 @@ class Dataset(threading.Thread):
       mask = self.masks[image_index].reshape(-1)
       # print("mask shape::",mask.shape,self.rays[0][0].shape)
       
-      ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
-      # print("ray_indices_all::",ray_indices_all.shape,mask.sum())
+      self.withmask = False
+      if self.withmask:
+            ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
+      else:
+            ray_indices_all = np.arange(self.rays[0][0].shape[0])
+      
+      # ray_indices_all = np.arange(self.rays[0][0].shape[0])[mask==True]
+      print("ray_indices_all::",ray_indices_all.shape,mask.sum())
       ray_indices_id = np.random.randint(0, ray_indices_all.shape[0],
                                       (self.batch_size,))
       ray_indices = ray_indices_all[ray_indices_id]
@@ -401,7 +408,6 @@ class LLFF(Dataset):
         images.append(image)
     images = np.stack(images, axis=-1)
 
-
     # Load poses and bds.
     with utils.open_file(path.join(self.data_dir, 'poses_bounds.npy'),
                          'rb') as fp:
@@ -442,7 +448,7 @@ class LLFF(Dataset):
     # Select the split.
     self.scene = 'Panther'
     if self.scene == 'Panther':
-          i_test = np.array([[1,2,3,4,24,38,49,62,74,86,96,111,140,188,205,208,209,231,235,245,266,273,312]])
+          i_test = np.array([1,2,3,4,24,38,49,62,74,86,96,111,140,188,205,208,209,231,235,245,266,273,312])
           
     else:
           i_test = np.arange(images.shape[0])[::config.llffhold]
@@ -456,10 +462,12 @@ class LLFF(Dataset):
       indices = i_test
     images = images[indices]
     poses = poses[indices]
-    
+    print("Loading poses:")
+    print("poses shape::",poses.shape)
     print("i_test:",i_test,"i_train",i_train)
     
     self.images = images
+    print("Loading the images:")
     print("image shape::",self.images.shape)
     # Load masks TO CHANGE
     print("Loading the mask:")
@@ -486,6 +494,7 @@ class LLFF(Dataset):
     """Generate normalized device coordinate rays for llff."""
     if self.split == 'test':
       n_render_poses = self.render_poses.shape[0]
+      # print("debug for concatenate:",self.render_poses.shape,self.camtoworlds.shape)
       self.camtoworlds = np.concatenate([self.render_poses, self.camtoworlds],
                                         axis=0)
 
